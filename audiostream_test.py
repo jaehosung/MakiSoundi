@@ -4,58 +4,79 @@ import time
 import numpy as np
 from threading import Thread
 from queue import Queue
-
-p = pyaudio.PyAudio()
+from scipy import signal
 
 # absolute threshold for onset detection
-ONSET_THRES = 0.08
+ONSET_THRES = 0.015
+# automatically terminate after duration
+STREAM_DURATION = 30 # second
 
+DTYPE = np.float32
 CHANNELS = 1
-FS = 48000
+FS = 48000 # Hz
 # CHUNK_SIZE = 512
-CHUNK_SIZE = 256
+CHUNK_SIZE = 128
 LOCALIZE_SIZE = 1024
 NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
 HOLD_COUNT = 0
 
+print("maximum resolution: {0:.3f} s".format(LOCALIZE_SIZE/FS))
+print("warning: first onset is useless; to be fixed")
 
-print("maximum resolution: {0:.3f}".format(LOCALIZE_SIZE/FS))
-
+# Axiliary glabal variables: to be refactored
 analyze_queue = Queue()
+window = np.kaiser(LOCALIZE_SIZE, 24)
+freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
+#ffts = []
+hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 2000/(FS/2)], btype='band')
+zi = signal.lfilter_zi(hpcoef_b, hpcoef_a)
+
+def estimate_pitch(sample):
+    """
+    Estimate pitch from sample.
+    """
+    windowed_sample = np.multiply(window, sample)
+    sample_fft = np.fft.fft(windowed_sample, LOCALIZE_SIZE//2)
+    #ffts.append(sample_fft)
+    return freq[np.argmax(np.absolute(sample_fft))]
 
 def analyze_threadf():
     """
-    Frequency analyzing thread function
+    Frequency analyzing thread function.
     """
     hold_count = NUM_HOLD - 1
-    maxval = 0
     segments_buffer = []
     while(True):
         # queue.get blocks thread till new data arrives
         segment = analyze_queue.get()
-        if (hold_count > 0):
-            hold_count -= 1
+        if (hold_count > 0):    
             segments_buffer.append(segment)
+            hold_count -= 1
         else:
+            segments_buffer.append(segment)
             localized_sample = np.concatenate(segments_buffer)
-            maxval = localized_sample.max()
+            # localized sample processed here
+            pitch = estimate_pitch(localized_sample)
+            print("estimated: ", pitch, " Hz")
+            print()
             segments_buffer.clear()
             hold_count = NUM_HOLD - 1
-            print(maxval)
         
 def detect_onset(in_data, frame_count, time_info, flag):
     """
     Onset detector. Runs on separate thread implicitly.
     """
     # Raw streaming data with size CHUNK_SIZE
-    audio_data = np.frombuffer(in_data, dtype=np.float32)
+    audio_data = np.frombuffer(in_data, dtype=DTYPE)
+    global zi
     global HOLD_COUNT
+    audio_filtered, zi = signal.lfilter(hpcoef_b, hpcoef_a, audio_data, zi=zi)
     if (HOLD_COUNT > 0):
         # hold and sample
-        analyze_queue.put(audio_data)
+        analyze_queue.put(audio_filtered)
         HOLD_COUNT -= 1
     else:
-        if (any(audio_data>ONSET_THRES)):
+        if (any(audio_filtered>ONSET_THRES)):
             # Onset detected here
             print("onset") 
             HOLD_COUNT = NUM_HOLD
@@ -63,8 +84,9 @@ def detect_onset(in_data, frame_count, time_info, flag):
 
 def stream_threadf():
     """
-    Audio streaming thread function
+    Audio streaming thread function.
     """
+    p = pyaudio.PyAudio()
     stream = p.open(format=pyaudio.paFloat32,
                 channels=CHANNELS,
                 rate=FS,
@@ -74,7 +96,7 @@ def stream_threadf():
                 frames_per_buffer=CHUNK_SIZE)
     stream.start_stream()
     while stream.is_active():
-        time.sleep(10)
+        time.sleep(STREAM_DURATION)
         stream.stop_stream()
         print("Stream is stopped")    
     stream.close()
