@@ -7,16 +7,16 @@ from queue import Queue
 from scipy import signal
 
 # absolute threshold for onset detection
-ONSET_THRES = 0.03
+ONSET_THRES = 0.02
 # automatically terminate after duration
-STREAM_DURATION = 18 # second
+STREAM_DURATION = 11 # second
 
 DTYPE = np.float32
 CHANNELS = 1
 FS = 48000 # Hz
 # CHUNK_SIZE = 512
 CHUNK_SIZE = 128
-LOCALIZE_SIZE = 4096
+LOCALIZE_SIZE = 2048
 NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
 HOLD_COUNT = 0
 
@@ -29,7 +29,6 @@ window = np.kaiser(LOCALIZE_SIZE, 16)
 freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
 hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 2000/(FS/2)], btype='band')
 zi = signal.lfilter_zi(hpcoef_b, hpcoef_a)
-onset_cnt = 0
 
 def estimate_pitch(sample):
     """
@@ -43,23 +42,25 @@ def analyze_threadf():
     """
     Frequency analyzing thread function.
     """
+    onset_cnt = 0
     hold_count = NUM_HOLD - 1
     segments_buffer = []
     while(True):
         # queue.get blocks thread till new data arrives
         segment = analyze_queue.get()
+        onset_temp = onset_cnt
         if (hold_count > 0):    
             segments_buffer.append(segment)
             hold_count -= 1
-        else:
+        else:            
             segments_buffer.append(segment)
             localized_sample = np.concatenate(segments_buffer)
             # localized sample processed here
             pitch = estimate_pitch(localized_sample)
-            print("estimated: ", pitch, " Hz")
-            print()
+            print("num {0:02d} : {1:.3f} Hz".format(onset_temp, pitch), end='\n\n')
             segments_buffer.clear()
             hold_count = NUM_HOLD - 1
+            onset_cnt += 1
         
 def detect_onset(in_data, frame_count, time_info, flag):
     """
@@ -78,7 +79,7 @@ def detect_onset(in_data, frame_count, time_info, flag):
     else:
         if (any(audio_filtered>ONSET_THRES)):
             # Onset detected here
-            print("onset num {0:d}".format(onset_cnt)) 
+            print("onset".format(onset_cnt)) 
             onset_cnt += 1
             HOLD_COUNT = NUM_HOLD
     return in_data, pyaudio.paContinue
