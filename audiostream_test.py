@@ -7,16 +7,16 @@ from queue import Queue
 from scipy import signal
 
 # absolute threshold for onset detection
-ONSET_THRES = 0.015
+ONSET_THRES = 0.03
 # automatically terminate after duration
-STREAM_DURATION = 30 # second
+STREAM_DURATION = 18 # second
 
 DTYPE = np.float32
 CHANNELS = 1
 FS = 48000 # Hz
 # CHUNK_SIZE = 512
 CHUNK_SIZE = 128
-LOCALIZE_SIZE = 1024
+LOCALIZE_SIZE = 4096
 NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
 HOLD_COUNT = 0
 
@@ -25,11 +25,11 @@ print("warning: first onset is useless; to be fixed")
 
 # Axiliary glabal variables: to be refactored
 analyze_queue = Queue()
-window = np.kaiser(LOCALIZE_SIZE, 24)
+window = np.kaiser(LOCALIZE_SIZE, 16)
 freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-#ffts = []
 hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 2000/(FS/2)], btype='band')
 zi = signal.lfilter_zi(hpcoef_b, hpcoef_a)
+onset_cnt = 0
 
 def estimate_pitch(sample):
     """
@@ -37,7 +37,6 @@ def estimate_pitch(sample):
     """
     windowed_sample = np.multiply(window, sample)
     sample_fft = np.fft.fft(windowed_sample, LOCALIZE_SIZE//2)
-    #ffts.append(sample_fft)
     return freq[np.argmax(np.absolute(sample_fft))]
 
 def analyze_threadf():
@@ -70,6 +69,7 @@ def detect_onset(in_data, frame_count, time_info, flag):
     audio_data = np.frombuffer(in_data, dtype=DTYPE)
     global zi
     global HOLD_COUNT
+    global onset_cnt
     audio_filtered, zi = signal.lfilter(hpcoef_b, hpcoef_a, audio_data, zi=zi)
     if (HOLD_COUNT > 0):
         # hold and sample
@@ -78,7 +78,8 @@ def detect_onset(in_data, frame_count, time_info, flag):
     else:
         if (any(audio_filtered>ONSET_THRES)):
             # Onset detected here
-            print("onset") 
+            print("onset num {0:d}".format(onset_cnt)) 
+            onset_cnt += 1
             HOLD_COUNT = NUM_HOLD
     return in_data, pyaudio.paContinue
 
