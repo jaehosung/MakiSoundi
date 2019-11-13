@@ -6,10 +6,12 @@ from threading import Thread
 from queue import Queue
 from scipy import signal
 
+from numba import jit
+
 # absolute threshold for onset detection
-ONSET_THRES = 0.02
+ONSET_THRES = 0.025
 # automatically terminate after duration
-STREAM_DURATION = 11 # second
+STREAM_DURATION = 40 # second
 
 DTYPE = np.float32
 CHANNELS = 1
@@ -25,16 +27,21 @@ print("warning: first onset is useless; to be fixed")
 
 # Axiliary glabal variables: to be refactored
 analyze_queue = Queue()
-window = np.kaiser(LOCALIZE_SIZE, 16)
+window = np.kaiser(LOCALIZE_SIZE, 20)
 freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
 hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 2000/(FS/2)], btype='band')
 zi = signal.lfilter_zi(hpcoef_b, hpcoef_a)
+onset_cnt = 0
+
+@jit(nopython=True)
+def mult_wind(sample):
+    return np.multiply(window, sample)
 
 def estimate_pitch(sample):
     """
     Estimate pitch from sample.
     """
-    windowed_sample = np.multiply(window, sample)
+    windowed_sample = mult_wind(sample)
     sample_fft = np.fft.fft(windowed_sample, LOCALIZE_SIZE//2)
     return freq[np.argmax(np.absolute(sample_fft))]
 
@@ -52,7 +59,7 @@ def analyze_threadf():
         if (hold_count > 0):    
             segments_buffer.append(segment)
             hold_count -= 1
-        else:            
+        else:
             segments_buffer.append(segment)
             localized_sample = np.concatenate(segments_buffer)
             # localized sample processed here
@@ -61,7 +68,7 @@ def analyze_threadf():
             segments_buffer.clear()
             hold_count = NUM_HOLD - 1
             onset_cnt += 1
-        
+
 def detect_onset(in_data, frame_count, time_info, flag):
     """
     Onset detector. Runs on separate thread implicitly.
