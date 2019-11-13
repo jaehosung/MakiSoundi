@@ -9,9 +9,9 @@ from scipy import signal
 from numba import jit
 
 # absolute threshold for onset detection
-ONSET_THRES = 0.025
+ONSET_THRES = 0.027
 # automatically terminate after duration
-STREAM_DURATION = 40 # second
+STREAM_DURATION = 25 # second
 
 DTYPE = np.float32
 CHANNELS = 1
@@ -27,9 +27,9 @@ print("warning: first onset is useless; to be fixed")
 
 # Axiliary glabal variables: to be refactored
 analyze_queue = Queue()
-window = np.kaiser(LOCALIZE_SIZE, 20)
+window = np.kaiser(LOCALIZE_SIZE, 13)
 freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 2000/(FS/2)], btype='band')
+hpcoef_b, hpcoef_a = signal.butter(3, [300/(FS/2), 1500/(FS/2)], btype='band')
 zi = signal.lfilter_zi(hpcoef_b, hpcoef_a)
 onset_cnt = 0
 
