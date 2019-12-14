@@ -15,7 +15,7 @@ class AudioInput():
     LOCALIZE_SIZE = 2048
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
     freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-    hpcoef_b, hpcoef_a = signal.butter(3, [100/(FS/2), 1800/(FS/2)], btype='band')
+    hpcoef_b, hpcoef_a = signal.butter(3, [200/(FS/2), 1800/(FS/2)], btype='band')
     window = np.kaiser(LOCALIZE_SIZE, 15)
     AudioInputEventType = pygame.USEREVENT+1
     AudioInputEvent = pygame.event.Event(AudioInputEventType)
@@ -51,6 +51,7 @@ class AudioInput():
         self.stream.start_stream()
         analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
         analyze_thread.start()
+        print("startsete")
     
     def _terminate_stream(self):
         self.stream.close()

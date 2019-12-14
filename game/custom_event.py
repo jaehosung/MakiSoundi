@@ -9,7 +9,7 @@ VERBOSE = True # verbose mode
 
 def audio_threadf(audio_input):
     global VERBOSE
-    audio_input.start_stream(onset_thres=0.023, verbose=VERBOSE, accept_band=[100, 300])
+    audio_input.start_stream(onset_thres=0.023, verbose=VERBOSE, accept_band=[100, 1200])
 
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
@@ -58,9 +58,9 @@ while True:
         if VERBOSE:
             print("Terminated by ESC key")
         audio_input._terminate_stream()
+        audio_thread.join()
         sys.exit()
     
     screen.fill(black)
     pygame.draw.circle(screen, white, (pos_x, pos_y), 20)
     pygame.display.update()
-
