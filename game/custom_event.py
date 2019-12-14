@@ -7,10 +7,9 @@ from threading import Thread
 
 VERBOSE = True # verbose mode
 
-def audio_threadf():
+def audio_threadf(audio_input):
     global VERBOSE
-    audio_input = AudioInput()
-    audio_input.start_stream(onset_thres=0.021, verbose=VERBOSE)
+    audio_input.start_stream(onset_thres=0.023, verbose=VERBOSE, accept_band=[100, 300])
 
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
@@ -22,7 +21,8 @@ pygame.init()
 if VERBOSE:
     print("Pygame initialized...")
 print("Press ESC to exit")
-audio_thread = Thread(target=audio_threadf, daemon = True)
+audio_input = AudioInput()
+audio_thread = Thread(target=audio_threadf, daemon=True, args=(audio_input,))
 audio_thread.start()
 
 pygame.display.set_caption("Simple PyGame Example")
@@ -57,6 +57,7 @@ while True:
     if key_event[pygame.K_ESCAPE]:
         if VERBOSE:
             print("Terminated by ESC key")
+        audio_input._terminate_stream()
         sys.exit()
     
     screen.fill(black)
