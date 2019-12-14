@@ -42,6 +42,9 @@ def pygame_threadf():
     
         if key_event[pygame.K_DOWN]:
             pos_y += 1
+            
+        if key_event[pygame.K_ESCAPE]:
+            sys.exit()
         
         screen.fill(black)
         pygame.draw.circle(screen, white, (pos_x, pos_y), 20)
@@ -50,5 +53,4 @@ def pygame_threadf():
 pygame_thread = Thread(target=pygame_threadf)
 pygame_thread.start()
 audio_input = AudioInput()
-audio_input.start_stream()
-
+audio_input.start_stream(onset_thres=0.035, verbose=True)

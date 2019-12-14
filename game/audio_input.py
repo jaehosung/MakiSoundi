@@ -21,22 +21,22 @@ class AudioInput():
     
     def __init__(self):
         self.onset_thres = 1; # just for initialization
-        self.stream_duration = 0 # just for initialization
         self.verbose = False # just for ini
         self.analyze_queue = Queue();
         self.zi = signal.lfilter_zi(AudioInput.hpcoef_b, AudioInput.hpcoef_a) # filter initial value
         self.onset_cnt = 0
         self.hold_count = 0
+        self.stream_thred = None
+        self.analyze_thread = None
+        self.stream = None
         
-    def start_stream(self, onset_thres=0.035, stream_duration=99999, verbose = False):        
+    def start_stream(self, onset_thres=0.035, verbose = False):        
         self.onset_thres = onset_thres; # onset threashold
-        self.stream_duration = stream_duration # streaming duration
         self.verbose = verbose
-        stream_thread = Thread(target=self._stream_threadf)
-        analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
-        stream_thread.start()
-        analyze_thread.start()
-        stream_thread.join()
+        self.stream_thread = Thread(target=self._stream_threadf, daemon = True)
+        self.analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
+        self.stream_thread.start()
+        self.analyze_thread.start()
         
     def _stream_threadf(self):
         p = pyaudio.PyAudio()
@@ -48,13 +48,17 @@ class AudioInput():
                         stream_callback=self._detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
         stream.start_stream()
-        while stream.is_active():
-            time.sleep(self.stream_duration)
-            stream.stop_stream()
-            # print("Stream is stopped")    
-        stream.close()
-        p.terminate()
-
+        while (True):
+            time.sleep(999999)
+#        while stream.is_active():
+#            time.sleep(self.stream_duration)
+            
+#    def _terminate_stream(self):
+#        self.stream.stop_stream()
+#            # print("Stream is stopped")    
+#        self.stream.close()
+#        self.p.terminate()
+            
     def _detect_onset(self, in_data, frame_count, time_info, flag):
         """
         Onset detector. Runs on separate thread implicitly.
@@ -117,5 +121,5 @@ class AudioInput():
 if __name__ == "__main__":
     pygame.init()
     audio_handler = AudioInput()
-    audio_handler.start_stream(onset_thres=0.035, stream_duration=40, verbose=True)
+    audio_handler.start_stream(onset_thres=0.035, verbose=True)
     pygame.quit()
