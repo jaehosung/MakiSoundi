@@ -16,7 +16,8 @@ class AudioInput():
     freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
     hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 1800/(FS/2)], btype='band')
     window = np.kaiser(LOCALIZE_SIZE, 13)
-    AudioInputEvent = pygame.event.Event(pygame.USEREVENT+1, message="Bad cat!")
+    AudioInputEventType = pygame.USEREVENT+1
+    AudioInputEvent = pygame.event.Event(AudioInputEventType)
     
     def __init__(self):
         self.onset_thres = 1; # just for initialization
@@ -89,6 +90,7 @@ class AudioInput():
                 localized_sample = np.concatenate(segments_buffer)
                 # localized sample processed here
                 pitch = self._estimate_pitch(localized_sample)
+                pygame.event.post(AudioInput.AudioInputEvent)
                 if self.verbose:
                     AudioInput._print_star(pitch) # print out pitch
                 segments_buffer.clear()
@@ -100,7 +102,6 @@ class AudioInput():
         """
         windowed_sample = np.multiply(AudioInput.window, sample)
         sample_fft = np.fft.fft(windowed_sample, AudioInput.LOCALIZE_SIZE//2)
-        
         return self.freq[np.argmax(np.absolute(sample_fft))]
     
     def _print_star(pitch):
@@ -116,5 +117,5 @@ class AudioInput():
 if __name__ == "__main__":
     pygame.init()
     audio_handler = AudioInput()
-    audio_handler.start_stream(onset_thres=0.035, stream_duration=50, verbose=True)
+    audio_handler.start_stream(onset_thres=0.035, stream_duration=40, verbose=True)
     pygame.quit()
