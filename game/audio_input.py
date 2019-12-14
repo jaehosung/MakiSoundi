@@ -116,5 +116,5 @@ class AudioInput():
 if __name__ == "__main__":
     pygame.init()
     audio_handler = AudioInput()
-    audio_handler.start_stream(onset_thres=0.035, stream_duration=10, verbose=True)
+    audio_handler.start_stream(onset_thres=0.035, stream_duration=50, verbose=True)
     pygame.quit()
