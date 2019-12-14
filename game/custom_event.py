@@ -10,7 +10,7 @@ VERBOSE = True # verbose mode
 def audio_threadf():
     global VERBOSE
     audio_input = AudioInput()
-    audio_input.start_stream(onset_thres=0.025, verbose=VERBOSE)
+    audio_input.start_stream(onset_thres=0.021, verbose=VERBOSE)
 
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480

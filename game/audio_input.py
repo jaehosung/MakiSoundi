@@ -15,7 +15,7 @@ class AudioInput():
     LOCALIZE_SIZE = 4096
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
     freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-    hpcoef_b, hpcoef_a = signal.butter(3, [100/(FS/2), 500/(FS/2)], btype='band')
+    hpcoef_b, hpcoef_a = signal.butter(3, [200/(FS/2), 1800/(FS/2)], btype='band')
     window = np.kaiser(LOCALIZE_SIZE, 15)
     AudioInputEventType = pygame.USEREVENT+1
     AudioInputEvent = pygame.event.Event(AudioInputEventType)
