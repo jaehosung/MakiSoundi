@@ -33,12 +33,6 @@ class AudioInput():
     def start_stream(self, onset_thres=0.035, verbose = False):        
         self.onset_thres = onset_thres; # onset threashold
         self.verbose = verbose
-        self.stream_thread = Thread(target=self._stream_threadf, daemon = True)
-        self.analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
-        self.stream_thread.start()
-        self.analyze_thread.start()
-        
-    def _stream_threadf(self):
         p = pyaudio.PyAudio()
         stream = p.open(format=pyaudio.paFloat32,
                         channels=AudioInput.CHANNELS,
@@ -47,18 +41,11 @@ class AudioInput():
                         input=True,
                         stream_callback=self._detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
+        analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
+        
         stream.start_stream()
-        while (True):
-            time.sleep(999999)
-#        while stream.is_active():
-#            time.sleep(self.stream_duration)
-            
-#    def _terminate_stream(self):
-#        self.stream.stop_stream()
-#            # print("Stream is stopped")    
-#        self.stream.close()
-#        self.p.terminate()
-            
+        analyze_thread.start()
+        
     def _detect_onset(self, in_data, frame_count, time_info, flag):
         """
         Onset detector. Runs on separate thread implicitly.
