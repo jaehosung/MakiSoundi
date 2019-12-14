@@ -4,6 +4,7 @@ import numpy as np
 from threading import Thread
 from queue import Queue
 from scipy import signal
+from scipy.fftpack import fft, fftfreq
 import pygame
 
 class AudioInput():
@@ -13,9 +14,9 @@ class AudioInput():
     CHUNK_SIZE = 128
     LOCALIZE_SIZE = 4096
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
-    freq = np.fft.fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-    hpcoef_b, hpcoef_a = signal.butter(3, [500/(FS/2), 1800/(FS/2)], btype='band')
-    window = np.kaiser(LOCALIZE_SIZE, 13)
+    freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
+    hpcoef_b, hpcoef_a = signal.butter(3, [100/(FS/2), 500/(FS/2)], btype='band')
+    window = np.kaiser(LOCALIZE_SIZE, 15)
     AudioInputEventType = pygame.USEREVENT+1
     AudioInputEvent = pygame.event.Event(AudioInputEventType)
     
@@ -33,6 +34,10 @@ class AudioInput():
     def start_stream(self, onset_thres=0.035, verbose = False):        
         self.onset_thres = onset_thres; # onset threashold
         self.verbose = verbose
+        if verbose:
+            print("Audio input reader starting...")
+            print("sampling rate : {0:d} Hz".format(AudioInput.FS))
+            print("resolution : {0:.2f} ms".format(AudioInput.LOCALIZE_SIZE/AudioInput.FS*1000))
         p = pyaudio.PyAudio()
         stream = p.open(format=pyaudio.paFloat32,
                         channels=AudioInput.CHANNELS,
@@ -42,13 +47,11 @@ class AudioInput():
                         stream_callback=self._detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
         stream.start_stream()
-        
-        
-        #stream_thread = Thread(target=self._stream_threadf, daemon = True)
         analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
-        #stream_thread.start()
         analyze_thread.start()
-        
+    
+    def _terminate_stream(self):
+        pass
         
     def _detect_onset(self, in_data, frame_count, time_info, flag):
         """
@@ -87,7 +90,7 @@ class AudioInput():
                 pitch = self._estimate_pitch(localized_sample)
                 pygame.event.post(AudioInput.AudioInputEvent)
                 if self.verbose:
-                    AudioInput._print_star(pitch) # print out pitch
+                    print("detect {0:.2f} Hz".format(pitch)) # print out pitch
                 segments_buffer.clear()
                 h_cnt = AudioInput.NUM_HOLD - 1
     
@@ -96,21 +99,24 @@ class AudioInput():
         Estimate pitch from sampCle.
         """
         windowed_sample = np.multiply(AudioInput.window, sample)
-        sample_fft = np.fft.fft(windowed_sample, AudioInput.LOCALIZE_SIZE//2)
+        sample_fft = fft(windowed_sample, AudioInput.LOCALIZE_SIZE//2)
         return self.freq[np.argmax(np.absolute(sample_fft))]
     
-    def _print_star(pitch):
-        num_star = int((pitch-500)/25)
-        if num_star < 0:
-            num_star = 0
-        else:
-            print("{0:04d}hz\t".format(int(pitch)),end = "")
-            for i in range(num_star):
-                print('#', end='')
-            print("")
+    
+#    def _print_star(pitch):
+#        num_star = int((pitch-500)/25)
+#        if num_star < 0:
+#            num_star = 0
+#        else:
+#            print("{0:04d}hz\t".format(int(pitch)),end = "")
+#            for i in range(num_star):
+#                print('#', end='')
+#            print("")
 
 if __name__ == "__main__":
     pygame.init()
-    audio_handler = AudioInput()
-    audio_handler.start_stream(onset_thres=0.035, verbose=True)
+    audio_input = AudioInput()
+    audio_input.start_stream(onset_thres=0.035, verbose=True)
+    time.sleep(5)
+    audio_input._terminate_stream()
     pygame.quit()
