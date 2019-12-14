@@ -41,10 +41,14 @@ class AudioInput():
                         input=True,
                         stream_callback=self._detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
-        analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
-        
         stream.start_stream()
+        
+        
+        #stream_thread = Thread(target=self._stream_threadf, daemon = True)
+        analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
+        #stream_thread.start()
         analyze_thread.start()
+        
         
     def _detect_onset(self, in_data, frame_count, time_info, flag):
         """
