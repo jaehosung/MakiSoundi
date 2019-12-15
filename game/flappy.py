@@ -19,7 +19,7 @@ AudioInputUpEvent = pygame.event.Event(AudioInputUpType)
 AudioInputDownType = pygame.USEREVENT+2
 AudioInputDownEvent = pygame.event.Event(AudioInputDownType)
 
-audio_input = AudioInput(onset_thres=0.04, verbose=VERBOSE)
+audio_input = AudioInput(onset_thres=0.035, verbose=VERBOSE)
 audio_input.add_onset_action(pygame.event.post, AudioInputUpEvent, accept_band=[110, 1000])
 audio_input.add_onset_action(pygame.event.post, AudioInputDownEvent, accept_band=[50, 100])
 audio_input.launch()

@@ -24,9 +24,9 @@ def press_a():
     keyboard.press('a')
     keyboard.release('a')
 
-audio_input = AudioInput(onset_thres=0.03, verbose=True)
-audio_input.add_onset_action(press_space, accept_band=[90, 200])
-audio_input.add_onset_action(press_a, accept_band=[200, 1000])
+audio_input = AudioInput(onset_thres=0.035, verbose=True)
+audio_input.add_onset_action(press_space, accept_band=[1000, 2300])
+audio_input.add_onset_action(press_a, accept_band=[50, 1000])
 audio_input.launch()
 
 state = {'turn': 0}
@@ -64,7 +64,7 @@ def animate():
 
 def flick():
     "Flick fidget spinner."
-    state['turn'] += 50
+    state['turn'] += 80
 
 def drag():
     "Drag fidget spinner."

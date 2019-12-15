@@ -9,13 +9,14 @@ from scipy.fftpack import fft, fftfreq
 class AudioInput():
     DTYPE = np.float32
     CHANNELS = 1
-    FS = 44100 # Hz
+    FS = 48000 # Hz
     CHUNK_SIZE = 128
-    LOCALIZE_SIZE = 1024
+    LOCALIZE_SIZE = 2048
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
     freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
-    hpcoef_b, hpcoef_a = signal.butter(3, [200/(FS/2), 1800/(FS/2)], btype='band')
-    window = np.kaiser(LOCALIZE_SIZE, 16)
+    #hpcoef_b, hpcoef_a = signal.butter(3, [150/(FS/2), 2500/(FS/2)], btype='band')
+    hpcoef_b, hpcoef_a = signal.butter(3, 200/(FS/2), btype='high')
+    window = np.kaiser(LOCALIZE_SIZE, 14)
     
     def __init__(self, onset_thres=0.035, verbose = False):
         self.onset_thres = onset_thres # just for initialization
