@@ -13,8 +13,16 @@ red = (255,0,0)
 
 pygame.init()
 
-audio_input = AudioInput()
-audio_input.launch(onset_thres=0.035, verbose=VERBOSE, accept_band=[80, 1200])
+AudioInputUpType = pygame.USEREVENT+1
+AudioInputUpEvent = pygame.event.Event(AudioInputUpType)
+
+AudioInputDownType = pygame.USEREVENT+2
+AudioInputDownEvent = pygame.event.Event(AudioInputDownType)
+
+audio_input = AudioInput(onset_thres=0.04, verbose=VERBOSE)
+audio_input.add_onset_action(pygame.event.post, AudioInputUpEvent, accept_band=[110, 1000])
+audio_input.add_onset_action(pygame.event.post, AudioInputDownEvent, accept_band=[50, 100])
+audio_input.launch()
 
 #Screen Size
 size = 700,500
@@ -45,12 +53,12 @@ def Score(score):
 
 FRAME_MULTIPLIER = 1 # must be integer
 
-HOLD_FRAME = 8
+HOLD_FRAME = 5
 DEFAULT_YSPEED = 2 * FRAME_MULTIPLIER
 UP_YSPEED = -5 * FRAME_MULTIPLIER
-DOWN_YSPEED = 4 * FRAME_MULTIPLIER
+DOWN_YSPEED = 7 * FRAME_MULTIPLIER
 HOLD_UP_YSPEED = -5 * FRAME_MULTIPLIER
-HOLD_DOWN_YSPEED = 3 * FRAME_MULTIPLIER
+HOLD_DOWN_YSPEED = 5 * FRAME_MULTIPLIER
 OBSPEED = 1 * FRAME_MULTIPLIER
 INPUT_TOGGLE = False
 
@@ -67,9 +75,12 @@ ysize = randint(0,350)
 space = 150
 obspeed = OBSPEED
 score = 0
-hold_count = 0
+
+uphold_count = 0
+downhold_count = 0
 
 while not done:
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             audio_input.terminate()
@@ -84,17 +95,16 @@ while not done:
 #        if event.type == pygame.KEYUP:
 #            if event.key == pygame.K_UP:
 #                y_speed = 5
-        if event.type == AudioInput.AudioInputEventType:
-            if INPUT_TOGGLE:
-                # audio input down-key mode
-                y_speed = DOWN_YSPEED
-                hold_count = int(round(HOLD_FRAME/3*2))
-            else:
-                # audio input up-key mode
-                y_speed = UP_YSPEED
-                hold_count = HOLD_FRAME
-            
-            
+        if event.type == AudioInputUpType:
+            # audio input up-key mode
+            y_speed = UP_YSPEED
+            uphold_count = HOLD_FRAME
+            downhold_count = 0
+        if event.type == AudioInputDownType:
+            # audio input up-key mode
+            y_speed = DOWN_YSPEED
+            downhold_count = HOLD_FRAME
+            uphold_count = 0
             
     key_event = pygame.key.get_pressed()
     if key_event[pygame.K_ESCAPE]:
@@ -134,17 +144,15 @@ while not done:
 
     if x > xloc and x < xloc+3:
         score = score + 1
-    
-    if hold_count > 0:
-        if INPUT_TOGGLE:
-            y_speed = HOLD_DOWN_YSPEED
-            hold_count -= 1
-        else:
-            y_speed = HOLD_UP_YSPEED
-            hold_count -= 1
+    if uphold_count > 0:
+        y_speed = HOLD_UP_YSPEED
+        uphold_count -= 1
+    elif downhold_count > 0:
+        y_speed = HOLD_DOWN_YSPEED
+        downhold_count -= 1
     else:
         y_speed = DEFAULT_YSPEED
-
+    
     pygame.display.flip()
     clock.tick(30)
 

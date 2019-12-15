@@ -5,26 +5,24 @@ from threading import Thread
 from queue import Queue
 from scipy import signal
 from scipy.fftpack import fft, fftfreq
-import pygame
 
 class AudioInput():
     DTYPE = np.float32
     CHANNELS = 1
-    FS = 48000 # Hz
+    FS = 44100 # Hz
     CHUNK_SIZE = 128
-    LOCALIZE_SIZE = 2048
+    LOCALIZE_SIZE = 1024
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
     freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
     hpcoef_b, hpcoef_a = signal.butter(3, [200/(FS/2), 1800/(FS/2)], btype='band')
-    window = np.kaiser(LOCALIZE_SIZE, 15)
-    AudioInputEventType = pygame.USEREVENT+1
-    AudioInputEvent = pygame.event.Event(AudioInputEventType)
+    window = np.kaiser(LOCALIZE_SIZE, 16)
     
-    def __init__(self):
-        self.onset_thres = 1; # just for initialization
-        self.verbose = False # just for ini
-        self.accept_band = [0, AudioInput.FS//2]
-        self.verbose = False
+    def __init__(self, onset_thres=0.035, verbose = False):
+        self.onset_thres = onset_thres # just for initialization
+        self.verbose = verbose # just for ini
+        self.onset_actions = []
+        self.onset_action_params = []
+        self.accept_bands = []
         self.analyze_queue = Queue();
         self.zi = signal.lfilter_zi(AudioInput.hpcoef_b, AudioInput.hpcoef_a) # filter initial value
         self.onset_cnt = 0
@@ -32,20 +30,22 @@ class AudioInput():
         self.main_thread = None
         self.analyze_thread = None
         self.stream = None
+    
+    def add_onset_action(self, onset_action, *onset_action_params, accept_band=[0, FS//2]):
+        self.onset_actions.append(onset_action)
+        self.onset_action_params.append((onset_action_params))
+        self.accept_bands.append(accept_band)        
         
-    def launch(self, onset_thres=0.035, verbose = False, accept_band=[0, FS//2]):
-        self.onset_thres = onset_thres
-        self.verbose = verbose
-        self.accept_band = accept_band
-        self.main_thread = Thread(target=self.__launch_streamf, daemon = True)
+    def launch(self):
+        self.main_thread = Thread(target=self.__launch_streamf, daemon=True, name="AudioInput_main_thread")
         self.main_thread.start()
-        if verbose:
+        if self.verbose:
             print("Audiostream main thread launched")
+        self.main_thread.join()
     
     def terminate(self):
         self.stream.close()
         self.p.terminate()
-        self.main_thread.join()
         if self.verbose:
             print("Audiostream main thread terminated")
     
@@ -63,8 +63,10 @@ class AudioInput():
                         stream_callback=self.__detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
         self.stream.start_stream()
-        self.analyze_thread = Thread(target=self.__analyze_threadf, daemon = True)
+        self.analyze_thread = Thread(target=self.__analyze_threadf, daemon = True, name="AudioInput_analyze_thread")
         self.analyze_thread.start()
+        if self.verbose:
+            print("Analyze thread launched")
         
     def __detect_onset(self, in_data, frame_count, time_info, flag):
         """
@@ -101,15 +103,13 @@ class AudioInput():
                 localized_sample = np.concatenate(segments_buffer)
                 # localized sample processed here
                 pitch = self.__estimate_pitch(localized_sample)
-                lb = self.accept_band[0]
-                rb = self.accept_band[1]
-                if (pitch > lb and pitch < rb):    
-                    pygame.event.post(AudioInput.AudioInputEvent)
-                    if self.verbose:
-                        print("detect {0:.2f} Hz".format(pitch))
-                else:
-                    if self.verbose:
-                        print("reject {0:.2f} Hz".format(pitch)) # print out pitch
+                if self.verbose:
+                    print("detect {0:.2f} Hz".format(pitch))
+                for i in range(len(self.onset_actions)):
+                    if (pitch > self.accept_bands[i][0] and pitch < self.accept_bands[i][1]):    
+                        self.onset_actions[i](*self.onset_action_params[i])
+                        if self.verbose:
+                            print("action {0:d} accepted".format(i))
                 segments_buffer.clear()
                 h_cnt = AudioInput.NUM_HOLD - 1
     
@@ -133,9 +133,9 @@ class AudioInput():
 #            print("")
 
 if __name__ == "__main__":
-    pygame.init()
+    print("10 seconds test")
     audio_input = AudioInput()
     audio_input.start_stream(onset_thres=0.035, verbose=True)
-    time.sleep(5)
+    time.sleep(10)
     audio_input._terminate_stream()
-    pygame.quit()
+    
