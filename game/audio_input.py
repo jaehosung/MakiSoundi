@@ -24,19 +24,33 @@ class AudioInput():
         self.onset_thres = 1; # just for initialization
         self.verbose = False # just for ini
         self.accept_band = [0, AudioInput.FS//2]
+        self.verbose = False
         self.analyze_queue = Queue();
         self.zi = signal.lfilter_zi(AudioInput.hpcoef_b, AudioInput.hpcoef_a) # filter initial value
         self.onset_cnt = 0
         self.hold_count = 0
-        self.stream_thred = None
+        self.main_thread = None
         self.analyze_thread = None
         self.stream = None
         
-    def start_stream(self, onset_thres=0.035, verbose = False, accept_band=[0, FS//2]):        
-        self.onset_thres = onset_thres; # onset threashold
+    def launch(self, onset_thres=0.035, verbose = False, accept_band=[0, FS//2]):
+        self.onset_thres = onset_thres
         self.verbose = verbose
         self.accept_band = accept_band
+        self.main_thread = Thread(target=self.__launch_streamf, daemon = True)
+        self.main_thread.start()
         if verbose:
+            print("Audiostream main thread launched")
+    
+    def terminate(self):
+        self.stream.close()
+        self.p.terminate()
+        self.main_thread.join()
+        if self.verbose:
+            print("Audiostream main thread terminated")
+    
+    def __launch_streamf(self):
+        if self.verbose:
             print("Audio input reader starting...")
             print("sampling rate : {0:d} Hz".format(AudioInput.FS))
             print("resolution : {0:.2f} ms".format(AudioInput.LOCALIZE_SIZE/AudioInput.FS*1000))
@@ -46,18 +60,13 @@ class AudioInput():
                         rate=AudioInput.FS,
                         output=False,
                         input=True,
-                        stream_callback=self._detect_onset,
+                        stream_callback=self.__detect_onset,
                         frames_per_buffer=AudioInput.CHUNK_SIZE)
         self.stream.start_stream()
-        analyze_thread = Thread(target=self._analyze_threadf, daemon = True)
-        analyze_thread.start()
-        print("startsete")
-    
-    def _terminate_stream(self):
-        self.stream.close()
-        self.p.terminate()
+        self.analyze_thread = Thread(target=self.__analyze_threadf, daemon = True)
+        self.analyze_thread.start()
         
-    def _detect_onset(self, in_data, frame_count, time_info, flag):
+    def __detect_onset(self, in_data, frame_count, time_info, flag):
         """
         Onset detector. Runs on separate thread implicitly.
         """
@@ -71,11 +80,11 @@ class AudioInput():
         else:
             if (any(audio_filtered>self.onset_thres)):
                 # Onset detected here
-                # print("onset".format(onset_cnt))
+                #print("onset")
                 self.hold_count = AudioInput.NUM_HOLD
         return in_data, pyaudio.paContinue
     
-    def _analyze_threadf(self):
+    def __analyze_threadf(self):
         """
         Frequency analyzing thread function.
         """
@@ -91,7 +100,7 @@ class AudioInput():
                 segments_buffer.append(segment)
                 localized_sample = np.concatenate(segments_buffer)
                 # localized sample processed here
-                pitch = self._estimate_pitch(localized_sample)
+                pitch = self.__estimate_pitch(localized_sample)
                 lb = self.accept_band[0]
                 rb = self.accept_band[1]
                 if (pitch > lb and pitch < rb):    
@@ -104,7 +113,7 @@ class AudioInput():
                 segments_buffer.clear()
                 h_cnt = AudioInput.NUM_HOLD - 1
     
-    def _estimate_pitch(self, sample):
+    def __estimate_pitch(self, sample):
         """
         Estimate pitch from sampCle.
         """
