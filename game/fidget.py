@@ -25,11 +25,12 @@ def press_a():
     keyboard.release('a')
 
 audio_input = AudioInput(onset_thres=0.035, verbose=True)
-audio_input.add_onset_action(press_space, accept_band=[1000, 2300])
-audio_input.add_onset_action(press_a, accept_band=[50, 1000])
+audio_input.add_onset_action(press_space, accept_band=[1000, 4000])
+audio_input.add_onset_action(press_a, accept_band=[50, 999])
 audio_input.launch()
 
 state = {'turn': 0}
+windmill_image = "Artboard 6.png"
 
 def spinner():
     "Draw fidget spinner."
@@ -49,26 +50,31 @@ def spinner():
     turtle.back(100)
     turtle.right(120)
     turtle.update()
-
+    
 def animate():
     "Animate fidget spinner."
-    damp = np.abs(round(state['turn']*0.008))+1
-    if state['turn'] > damp:
+    damp = max(np.abs(round(state['turn']*0.01)),1)
+    if state['turn'] > 0:
         state['turn'] -= damp
-    elif state['turn'] < -damp:
+    elif state['turn'] < 0:
         state['turn'] += damp
     else:
-        state['turan'] = 0
+        state['turn'] = 0
     spinner()
     turtle.ontimer(animate, 20)
 
 def flick():
     "Flick fidget spinner."
-    state['turn'] += 80
+    state['turn'] += 20
 
 def drag():
     "Drag fidget spinner."
-    state['turn'] -= 50
+    state['turn'] -= 20
+    
+def terminate():
+    audio_input.terminate()
+    turtle.bye()
+
 
 turtle.setup(420, 420, 370, 0)
 turtle.hideturtle()
@@ -76,9 +82,8 @@ turtle.tracer(False)
 turtle.width(20)
 turtle.onkey(flick, 'space')
 turtle.onkey(drag, 'a')
+turtle.onkey(terminate, 'Escape')
 turtle.listen()
 animate()
 turtle.done()
-audio_input.terminate()
-
  

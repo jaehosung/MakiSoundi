@@ -20,14 +20,14 @@ AudioInputDownType = pygame.USEREVENT+2
 AudioInputDownEvent = pygame.event.Event(AudioInputDownType)
 
 audio_input = AudioInput(onset_thres=0.035, verbose=VERBOSE)
-audio_input.add_onset_action(pygame.event.post, AudioInputUpEvent, accept_band=[110, 1000])
-audio_input.add_onset_action(pygame.event.post, AudioInputDownEvent, accept_band=[50, 100])
+audio_input.add_onset_action(pygame.event.post, AudioInputUpEvent, accept_band=[1000, 4000])
+audio_input.add_onset_action(pygame.event.post, AudioInputDownEvent, accept_band=[50, 999])
 audio_input.launch()
 
 #Screen Size
 size = 700,500
 screen = pygame.display.set_mode(size)
-pygame.display.set_caption("Flappy Bird in Python by @KartikKannapur")
+pygame.display.set_caption("Flappy Bird in Python")
 
 done = False
 clock = pygame.time.Clock()
@@ -53,13 +53,13 @@ def Score(score):
 
 FRAME_MULTIPLIER = 1 # must be integer
 
-HOLD_FRAME = 5
+HOLD_FRAME = 7
 DEFAULT_YSPEED = 2 * FRAME_MULTIPLIER
-UP_YSPEED = -5 * FRAME_MULTIPLIER
-DOWN_YSPEED = 7 * FRAME_MULTIPLIER
-HOLD_UP_YSPEED = -5 * FRAME_MULTIPLIER
-HOLD_DOWN_YSPEED = 5 * FRAME_MULTIPLIER
-OBSPEED = 1 * FRAME_MULTIPLIER
+UP_YSPEED = -6 * FRAME_MULTIPLIER
+HOLD_UP_YSPEED = -4 * FRAME_MULTIPLIER
+DOWN_YSPEED = 8 * FRAME_MULTIPLIER
+HOLD_DOWN_YSPEED = 6 * FRAME_MULTIPLIER
+OBSPEED = 3 * FRAME_MULTIPLIER
 INPUT_TOGGLE = False
 
 x = 350
@@ -91,17 +91,15 @@ while not done:
                 INPUT_TOGGLE = ~INPUT_TOGGLE
                 if VERBOSE:
                     print("input toggle")
-#
-#        if event.type == pygame.KEYUP:
-#            if event.key == pygame.K_UP:
-#                y_speed = 5
+
         if event.type == AudioInputUpType:
             # audio input up-key mode
             y_speed = UP_YSPEED
             uphold_count = HOLD_FRAME
             downhold_count = 0
+            
         if event.type == AudioInputDownType:
-            # audio input up-key mode
+            # audio input down-key mode
             y_speed = DOWN_YSPEED
             downhold_count = HOLD_FRAME
             uphold_count = 0
@@ -126,7 +124,6 @@ while not done:
         gameover()
         y_speed = 0
         obspeed = 0
-        done = True
 
     if x+20 > xloc and y-20 < ysize and x-15 < xsize+xloc:
         gameover()

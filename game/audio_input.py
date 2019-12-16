@@ -135,8 +135,8 @@ class AudioInput():
 
 if __name__ == "__main__":
     print("10 seconds test")
-    audio_input = AudioInput()
-    audio_input.start_stream(onset_thres=0.035, verbose=True)
-    time.sleep(10)
-    audio_input._terminate_stream()
+    audio_input = AudioInput(onset_thres=0.035, verbose=True)
+    audio_input.launch()
+    time.sleep(30)
+    audio_input.terminate()
     
