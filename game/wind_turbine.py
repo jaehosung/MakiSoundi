@@ -11,9 +11,9 @@ AudioInputUpEvent = pg.event.Event(AudioInputUpType)
 AudioInputDownType = pg.USEREVENT+2
 AudioInputDownEvent = pg.event.Event(AudioInputDownType)
 
-audio_input = AudioInput(onset_thres=0.035, verbose=VERBOSE)
-audio_input.add_onset_action(pg.event.post, AudioInputUpEvent, accept_band=[1000, 4000])
-audio_input.add_onset_action(pg.event.post, AudioInputDownEvent, accept_band=[50, 999])
+audio_input = AudioInput(onset_thres=0.045, verbose=VERBOSE)
+audio_input.add_onset_action(pg.event.post, AudioInputUpEvent, accept_band=[301, 4000])
+audio_input.add_onset_action(pg.event.post, AudioInputDownEvent, accept_band=[50, 300])
 audio_input.launch()
 
 screen = pg.display.set_mode((1440,1300))

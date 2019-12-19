@@ -15,7 +15,7 @@ class AudioInput():
     NUM_HOLD = LOCALIZE_SIZE//CHUNK_SIZE
     freq = fftfreq(LOCALIZE_SIZE, 1/FS)[0:LOCALIZE_SIZE//2]
     #hpcoef_b, hpcoef_a = signal.butter(3, [150/(FS/2), 2500/(FS/2)], btype='band')
-    hpcoef_b, hpcoef_a = signal.butter(3, 200/(FS/2), btype='high')
+    hpcoef_b, hpcoef_a = signal.butter(3, 300/(FS/2), btype='high')
     window = np.kaiser(LOCALIZE_SIZE, 14)
     
     def __init__(self, onset_thres=0.035, verbose = False):
